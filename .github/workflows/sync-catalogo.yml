@@ -1,0 +1,40 @@
+# Mantiene datos/snapshot-productos.json sincronizado con el catálogo público
+# de la tienda (precios, stock, disponibilidad). La CRM publicada en GitHub
+# Pages lee ese archivo (misma URL / raw.githubusercontent.com), por lo que no
+# depende de proxies CORS externos.
+name: Sincronizar catálogo de la tienda
+
+on:
+  schedule:
+    - cron: "*/30 * * * *"   # cada 30 minutos (hora UTC)
+  workflow_dispatch:          # botón "Run workflow" en la pestaña Actions
+
+permissions:
+  contents: write
+
+concurrency:
+  group: sync-catalogo
+  cancel-in-progress: false
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Descargar catálogo público y regenerar snapshot
+        shell: pwsh
+        run: ./scripts/sync-catalogo.ps1
+
+      - name: Publicar snapshot (solo si cambió)
+        run: |
+          if git diff --quiet -- datos/snapshot-productos.json; then
+            echo "Sin cambios en el catálogo; nada que publicar."
+          else
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git add datos/snapshot-productos.json
+            git commit -m "datos: sincronizar catálogo de la tienda ($(date -u +'%Y-%m-%d %H:%M UTC'))"
+            git push
+          fi

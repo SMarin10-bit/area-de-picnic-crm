@@ -4,6 +4,9 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Área de Picnic · CRM</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
 :root{
   --accent:#80AA8D;--dark:#2D3E46;--light:#EFF2EE;--bg:#F7F9F7;
@@ -93,7 +96,7 @@ tr:hover td{background:#FAFCFA}
 #modal-bg{position:fixed;inset:0;background:rgba(20,30,33,.55);display:flex;align-items:center;justify-content:center;z-index:50;padding:18px}
 #modal{background:#fff;border-radius:14px;width:520px;max-width:100%;max-height:90vh;overflow:auto;padding:24px}
 #modal h3{margin-bottom:16px;color:var(--dark)}
-#modal label{display:block;font-size:12px;font-weight:600;color:var(--mut);margin:12px 0 4px}
+#modal label,.card>label{display:block;font-size:12px;font-weight:600;color:var(--mut);margin:12px 0 4px}
 #modal .act{display:flex;gap:10px;justify-content:flex-end;margin-top:18px}
 .log-item{display:flex;gap:10px;padding:7px 0;border-bottom:1px dashed var(--line);font-size:12.5px}
 .log-item .t{color:var(--mut);min-width:118px}
@@ -101,6 +104,32 @@ tr:hover td{background:#FAFCFA}
 .chart-bars .bar{flex:1;background:linear-gradient(180deg,var(--accent),#5b8370);border-radius:5px 5px 0 0;min-width:14px;position:relative}
 .chart-bars .bar span{position:absolute;bottom:100%;left:0;right:0;text-align:center;font-size:10px;color:var(--mut);margin-bottom:3px}
 .chart-bars .xlab{position:relative;color:var(--mut);font-size:10.5px;text-align:center;padding-top:5px}
+/* Rótulo "Sin Stock" (Instrument Sans 11px, #e13030) debajo del precio */
+.sin-stock{display:block;margin-top:2px;font-family:'Instrument Sans','Segoe UI',Arial,sans-serif;font-size:11px;line-height:1.3;font-weight:600;letter-spacing:.2px;color:#e13030}
+/* Temáticas del catálogo */
+.b-viajes{background:#E3EFF8;color:#2C6B9A}
+.b-familia{background:#FBF0DC;color:#9A5B0A}
+.b-cocina{background:#E2F3EA;color:#1F7A56}
+.b-sin{background:#EDF0EF;color:#5c6b67}
+tr.tema-row td{background:var(--light);color:var(--dark);font-weight:700;font-size:12px;text-transform:uppercase;letter-spacing:.4px;padding:9px 10px;border-bottom:1px solid var(--line)}
+tr.tema-row:hover td{background:var(--light)}
+tr.tema-row td .xs{font-weight:500;text-transform:none;letter-spacing:0;margin-left:10px;color:var(--mut)}
+.themes-check{display:flex;gap:14px;flex-wrap:wrap;margin-top:4px}
+#modal .themes-check label{display:inline-flex;align-items:center;gap:6px;margin:0;font-weight:500;color:var(--fg);font-size:13px}
+.themes-check input{width:auto}
+/* Preferencias e historial de clientes */
+.pref-bar{display:flex;align-items:center;gap:8px;margin:5px 0;font-size:12px}
+.pref-bar .lab{width:96px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pref-bar .trk{flex:1;background:var(--light);border-radius:6px;height:10px;overflow:hidden}
+.pref-bar .fil{height:10px;border-radius:6px}
+.pref-bar .pct{width:86px;text-align:right;color:var(--mut);font-size:11.5px;white-space:nowrap}
+.hist-item{display:flex;gap:10px;padding:7px 0;border-bottom:1px dashed var(--line);font-size:12.5px;align-items:flex-start;flex-wrap:wrap}
+.hist-item .d{color:var(--mut);min-width:78px}
+.hist-item .n{min-width:64px;font-weight:600}
+.chips{display:flex;flex-wrap:wrap;gap:5px}
+.chip{display:inline-block;padding:3px 9px;border-radius:14px;font-size:11.5px;background:var(--light);color:var(--dark);border:1px solid var(--line)}
+.chip.sug{background:#fff;border-style:dashed}
+#modal.wide{width:720px}
 @media(max-width:860px){
   #app-view{grid-template-columns:1fr}
   .menu{flex-direction:row;flex-wrap:wrap;height:auto;position:static;gap:6px}
@@ -159,6 +188,30 @@ const SHOP_URL="https://"+STORE+"/";
 const CATALOG_URL=SHOP_URL+"productos";
 const TN_API="https://api.mitiendanube.com/v1";
 const LS_KEY="apex_crm_db_v1";
+const DB_VERSION=2;
+// Snapshot del catálogo mantenido por GitHub Actions (.github/workflows/sync-catalogo.yml).
+// Se lee desde raw.githubusercontent.com (permite CORS) o desde el mismo sitio (GitHub Pages).
+const REPO_RAW="https://raw.githubusercontent.com/SMarin10-bit/area-de-picnic-crm/main/";
+const SNAPSHOT_FILE="datos/snapshot-productos.json";
+
+// Temáticas del catálogo. Un título puede pertenecer a más de una temática
+// (ej. "Hay equipo ¡a cocinar!" está en Familia y en Cocina).
+const THEMES=[
+{key:"viajes",label:"Viajes",icon:"🧭",color:"#71b5dc"},
+{key:"familia",label:"Familia",icon:"👪",color:"#dc8f38"},
+{key:"cocina",label:"Cocina",icon:"🍳",color:"#80AA8D"}
+];
+const THEME_BOOKS={
+viajes:["el-pais-en-tero-aventura-en-jujuy","el-pais-en-tero-aventura-en-el-litoral-2da-edicion","el-pais-en-tero-aventura-en-puerto-madryn"],
+familia:["hay-equipo-a-cocinar","antonia-y-el-luno","no-te-olvides-antonia","la-semana-de-antonia"],
+cocina:["la-biblia-y-el-bodegon-1k058","huevo-tito-en-el-bodegon-hyd7i","hay-equipo-a-cocinar"]
+};
+// Respaldo por nombre (sin acentos ni signos) por si la tienda cambia el slug de un producto.
+const THEME_NAMES={
+viajes:["el pais en tero aventura en jujuy","el pais en tero aventura en el litoral","el pais en tero aventura en puerto madryn"],
+familia:["hay equipo a cocinar","antonia y el luno","no te olvides antonia","la semana de antonia"],
+cocina:["la biblia y el bodegon","huevo tito en el bodegon","hay equipo a cocinar"]
+};
 
 const SNAPSHOT=[
 {slug:"el-pais-en-tero-aventura-en-jujuy",name:"El País en Tero – Aventura en Jujuy",price:30000,currency:"ARS",stock:272,availability:"InStock",image:"https://acdn-us.mitiendanube.com/stores/007/631/689/products/whatsapp-image-2026-08-02-at-16-53-03-d4d0f2ee13202dda6e17857011151719-480-0.webp",description:"Compra online El País en Tero – Aventura en Jujuy. Libro ilustrado de viaje por el norte argentino.",weight:0.35},
@@ -174,14 +227,14 @@ const SNAPSHOT=[
 {slug:"la-semana-de-antonia",name:"La semana de Antonia",price:27000,currency:"ARS",stock:30,availability:"InStock",image:"https://acdn-us.mitiendanube.com/stores/007/631/689/products/semana-1-1487c1bd84eb1fb4af17781842381033-480-0.webp",description:"Compra online La semana de Antonia.",weight:0.3}
 ];
 
+// Proxies CORS públicos para la lectura en vivo (intento secundario; suelen caerse).
 const PROXIES=[
-{name:"directo",build:u=>u},
 {name:"allorigins",build:u=>"https://api.allorigins.win/raw?url="+encodeURIComponent(u)},
 {name:"corsproxy.io",build:u=>"https://corsproxy.io/?url="+encodeURIComponent(u)},
 {name:"codetabs",build:u=>"https://api.codetabs.com/v1/proxy?quest="+encodeURIComponent(u)}
 ];
 
-let db=null, view="dash", timer=null, busy=false;
+let db=null, view="dash", timer=null, busy=false, liveBusy=false;
 
 function esc(s){return String(s==null?"":s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]))}
 function fmt(n){return "$ "+Number(n||0).toLocaleString("es-AR",{minimumFractionDigits:2,maximumFractionDigits:2})}
@@ -189,6 +242,24 @@ function fmtD(d){const t=new Date(d);return t.toLocaleDateString("es-AR",{day:"2
 function ago(d){const s=(Date.now()-new Date(d).getTime())/1000;if(s<60)return "hace "+Math.round(s)+" seg";if(s<3600)return "hace "+Math.round(s/60)+" min";if(s<86400)return "hace "+Math.round(s/3600)+" h";return "hace "+Math.round(s/86400)+" d"}
 function daysAgo(n){return new Date(Date.now()-n*864e5).toISOString()}
 function uid(p){return p+"_"+Date.now().toString(36)+Math.random().toString(36).slice(2,7)}
+function fmtDT(d){const t=new Date(d);return isNaN(t.getTime())?"":t.toLocaleString("es-AR",{day:"2-digit",month:"2-digit",year:"numeric",hour:"2-digit",minute:"2-digit"})}
+// Marcas diacríticas (U+0300–U+036F) que deja normalize("NFD"); se construye sin escapes para evitar ambigüedades.
+const DIACRITICS=new RegExp("["+String.fromCharCode(768)+"-"+String.fromCharCode(879)+"]","g");
+function norm(s){return String(s==null?"":s).toLowerCase().normalize("NFD").replace(DIACRITICS,"").replace(/[^a-z0-9]+/g," ").trim()}
+// Tienda Nube agrega sufijos de 5 caracteres con dígitos a algunos slugs (ej. "-1k058").
+function baseSlug(s){s=String(s||"");const m=s.match(/-([a-z0-9]{5})$/);return m&&/\d/.test(m[1])?s.slice(0,-6):s}
+function themesFor(slug,name){
+  const n=norm(name),b=baseSlug(slug);
+  return THEMES.filter(t=>(THEME_BOOKS[t.key]||[]).some(s=>s===slug||baseSlug(s)===b)||(THEME_NAMES[t.key]||[]).some(k=>n===k||n.startsWith(k+" "))).map(t=>t.key);
+}
+const themeOf=k=>THEMES.find(t=>t.key===k);
+function themeLabels(p){return (p.themes||[]).map(k=>{const t=themeOf(k);return t?t.label:k}).join(" ")}
+function themeBadges(p){const th=(p.themes||[]).filter(k=>themeOf(k));return th.length?th.map(k=>{const t=themeOf(k);return '<span class="badge b-'+k+'">'+t.icon+' '+esc(t.label)+'</span>'}).join(" "):'<span class="badge b-sin">Sin temática</span>'}
+function isOut(p){return p.stock===0||p.availability==="OutOfStock"}
+function fullName(c){if(!c)return "—";const f=((c.firstName||"")+" "+(c.lastName||"")).trim();return f||c.name||"—"}
+function emailKey(e){return String(e==null?"":e).trim().toLowerCase()}
+function findByEmail(e,exceptId){e=emailKey(e);return e?db.customers.find(c=>c.id!==exceptId&&emailKey(c.email)===e):null}
+function splitName(full){const parts=String(full||"").trim().split(/\s+/).filter(Boolean);if(parts.length<=1)return {firstName:parts[0]||"",lastName:""};return {firstName:parts.slice(0,-1).join(" "),lastName:parts[parts.length-1]}}
 
 async function sha256(t){try{const b=await crypto.subtle.digest("SHA-256",new TextEncoder().encode("apex|"+t));return[...new Uint8Array(b)].map(x=>x.toString(16).padStart(2,"0")).join("")}catch(e){let h=0;for(const c of t)h=(h*31+c.charCodeAt(0))>>>0;return "f_"+h.toString(16)}}
 
@@ -199,19 +270,20 @@ function save(){localStorage.setItem(LS_KEY,JSON.stringify(db))}
 
 function seedData(){
   const now=Date.now();
-  const products=SNAPSHOT.map(p=>({id:"p_"+p.slug,slug:p.slug,name:p.name,price:p.price,currency:p.currency,stock:p.stock,availability:p.availability,image:p.image,description:p.description,weight:p.weight,crmPrice:null,status:"activo",category:"Libros infantiles",note:"",preview:true}));
-  const C=(id,name,email,phone,src,joined,tags,note)=>({id,name,email,phone,source:src,joined,tags,note,segment:"",demo:true});
+  const products=SNAPSHOT.map(p=>({id:"p_"+p.slug,slug:p.slug,name:p.name,price:p.price,currency:p.currency,stock:p.stock,availability:p.availability,image:p.image,description:p.description,weight:p.weight,crmPrice:null,status:"activo",category:"Libros infantiles",themes:themesFor(p.slug,p.name),note:"",preview:true}));
+  // Cliente = nombre + apellido vinculados a su email registrado (clave de asociación con los pedidos).
+  const C=(id,firstName,lastName,email,phone,src,joined,tags,note)=>({id,firstName,lastName,name:(firstName+" "+lastName).trim(),email:emailKey(email),phone,source:src,joined,tags,note,segment:"",demo:true});
   const customers=[
-    C("c1","María Fernández","maria.fernandez@gmail.com","+54 9 11 5474 2201","Tienda online",daysAgo(28),"VIP","Compró colección El País en Tero"),
-    C("c2","Julián Pérez","jperez85@hotmail.com","+54 9 11 3921 8874","Instagram",daysAgo(24),"Frecuente",null),
-    C("c3","Valentina Gómez","valen.gomez@gmail.com","+54 9 11 6052 3310","Feria",daysAgo(21),null,"Vendedora de ferias, busca precios mayorista"),
-    C("c4","Sofía Rodríguez","sofi.rod@gmail.com",null,"Recomendación",daysAgo(18),"VIP","Pidió autógrafos en pedido anterior"),
-    C("c5","Pedro Álvarez","pedro.alvarez@yahoo.com","+54 9 11 2233 4455","Tienda online",daysAgo(15),null,null),
-    C("c6","Ana Lucía Martínez","analu.martinez@gmail.com",null,"Instagram",daysAgo(12),"Frecuente",null),
-    C("c7","Lucas Bruno","lucas.bruno@gmail.com","+54 9 11 7788 9911","Tienda online",daysAgo(9),null,"Docente, quiere 30 ejemplares para el aula"),
-    C("c8","Camila Torres","cami.torres@gmail.com",null,"Instagram",daysAgo(6),null,null),
-    C("c9","Facundo Sosa","facundo.sosa@gmail.com","+54 9 11 4545 1212","Tienda online",daysAgo(3),null,null),
-    C("c10","Julieta López","juli.lopez@gmail.com",null,"Feria",daysAgo(1),null,null)
+    C("c1","María","Fernández","maria.fernandez@gmail.com","+54 9 11 5474 2201","Tienda online",daysAgo(28),"VIP","Compró colección El País en Tero"),
+    C("c2","Julián","Pérez","jperez85@hotmail.com","+54 9 11 3921 8874","Instagram",daysAgo(24),"Frecuente",null),
+    C("c3","Valentina","Gómez","valen.gomez@gmail.com","+54 9 11 6052 3310","Feria",daysAgo(21),null,"Vendedora de ferias, busca precios mayorista"),
+    C("c4","Sofía","Rodríguez","sofi.rod@gmail.com",null,"Recomendación",daysAgo(18),"VIP","Pidió autógrafos en pedido anterior"),
+    C("c5","Pedro","Álvarez","pedro.alvarez@yahoo.com","+54 9 11 2233 4455","Tienda online",daysAgo(15),null,null),
+    C("c6","Ana Lucía","Martínez","analu.martinez@gmail.com",null,"Instagram",daysAgo(12),"Frecuente",null),
+    C("c7","Lucas","Bruno","lucas.bruno@gmail.com","+54 9 11 7788 9911","Tienda online",daysAgo(9),null,"Docente, quiere 30 ejemplares para el aula"),
+    C("c8","Camila","Torres","cami.torres@gmail.com",null,"Instagram",daysAgo(6),null,null),
+    C("c9","Facundo","Sosa","facundo.sosa@gmail.com","+54 9 11 4545 1212","Tienda online",daysAgo(3),null,null),
+    C("c10","Julieta","López","juli.lopez@gmail.com",null,"Feria",daysAgo(1),null,null)
   ];
   const P=id=>products.find(p=>p.slug===id);
   const nm=id=>P(id)?P(id).name:"";
@@ -230,17 +302,36 @@ function seedData(){
     O(1011,"c4",14,[{name:nm("el-pais-en-tero-aventura-en-el-litoral-2da-edicion"),price:30000,qty:1}],"cancelado","Tienda online","Cliente pidió cambio de dirección")
   ];
   const syncLog=[{ts:now,ok:true,source:"snapshot-publico",added:products.length,updated:0,message:"Catálogo público importado de "+STORE+" · "+new Date().toLocaleString("es-AR")}];
-  return {meta:{createdAt:now,note:"Prototipo. Base local inicializada con snapshot del catálogo público real ("+SHOP_URL+")"},config:{tnToken:"",tnUrl:TN_API,syncInterval:60,mode:"auto"},auth:{user:"admin",hash:null},products,orders,customers,syncLog,lastSync:null,lastSource:null};
+  return {meta:{createdAt:now,version:DB_VERSION,note:"Prototipo. Base local inicializada con snapshot del catálogo público real ("+SHOP_URL+")"},config:{tnToken:"",tnUrl:TN_API,syncInterval:60,mode:"auto",snapshotUrl:REPO_RAW+SNAPSHOT_FILE},auth:{user:"admin",hash:null},products,orders,customers,syncLog,lastSync:null,lastSource:null};
+}
+
+// Actualiza bases guardadas por versiones anteriores de la CRM sin perder datos:
+// temáticas en productos, nombre/apellido separados en clientes, email normalizado, config nueva.
+function migrateDb(d){
+  let changed=false;
+  if(!d.meta){d.meta={createdAt:Date.now()};changed=true}
+  if(!d.config){d.config={tnToken:"",tnUrl:TN_API,syncInterval:60};changed=true}
+  if(!d.config.mode||d.config.mode==="proxy"){d.config.mode="auto";changed=true}
+  if(d.config.snapshotUrl==null){d.config.snapshotUrl=REPO_RAW+SNAPSHOT_FILE;changed=true}
+  if(!Array.isArray(d.syncLog)){d.syncLog=[];changed=true}
+  (d.products||[]).forEach(p=>{if(!Array.isArray(p.themes)){p.themes=themesFor(p.slug,p.name);changed=true}});
+  (d.customers||[]).forEach(c=>{
+    if(c.firstName==null||c.lastName==null){const s=splitName(c.name);c.firstName=s.firstName;c.lastName=s.lastName;changed=true}
+    const e=emailKey(c.email);if((c.email||"")!==e){c.email=e;changed=true}
+    const full=fullName(c);if(c.name!==full){c.name=full;changed=true}
+  });
+  if(d.meta.version!==DB_VERSION){d.meta.version=DB_VERSION;changed=true}
+  return changed;
 }
 
 async function init(){
   db=load();
   if(!db){db=seedData();db.auth.hash=await sha256("admin123");save()}
+  else if(migrateDb(db))save();
   const isDefault=db.auth.hash===await sha256("admin123");
   const sess=sessionStorage.getItem("apex_sess");
   if(sess&&db.auth.user===sess&&db.auth.hash)enterApp();
   else showLogin(isDefault);
-  if(db.auth.hash&&sess&&db.auth.user===sess)startTimer();
 }
 
 function showLogin(seeded){
@@ -266,7 +357,11 @@ function enterApp(){
   document.getElementById("app-view").classList.remove("hidden");
   document.getElementById("menu-user").textContent="Sesión: "+db.auth.user;
   go("dash");
-  if(!db.lastSync){const hint=document.querySelector("#view-dash .sync-strip");if(hint)setTimeout(()=>syncNow(true),600)}
+  if(db.lastSync&&db.lastSource&&db.lastSource!=="caché")setPill("on","Sincronizado · "+db.lastSource);
+  else if(db.lastSource==="caché")setPill("err","Caché local");
+  startTimer();
+  const interval=Math.max(30,db.config.syncInterval||60)*1000;
+  if(!db.lastSync||(Date.now()-db.lastSync)>interval)setTimeout(()=>{syncNow(true,true).catch(()=>{})},400);
 }
 
 function startTimer(){
@@ -284,24 +379,64 @@ function go(v){
   render();
 }
 
-async function fetchCatalogRaw(){
-  const mode=db.config.mode||"auto";
-  const list=PROXIES.map((p,i)=>({p,i}));
-  let lastErr=null;
-  for(const {p} of list){
-    if(mode==="directo"&&p.name!=="directo")continue;
-    if(mode==="proxy"&&p.name==="directo")continue;
-    try{
-      const ctrl=new AbortController();
-      const t=setTimeout(()=>ctrl.abort(),25000);
-      const r=await fetch(p.build(CATALOG_URL),{signal:ctrl.signal});
-      clearTimeout(t);
-      const ct=(r.headers.get("content-type")||"").toLowerCase();
-      if(r.ok){const text=await r.text();if(text&&text.includes("structured-data.item"))return{html:text,proxy:p.name,ok:true}}
-      else throw new Error("HTTP "+r.status);
-    }catch(e){lastErr=e;try{const r2=await fetch(p.build(CATALOG_URL));if(r2.ok){const t2=await r2.text();if(t2.includes("structured-data.item"))return{html:t2,proxy:p.name,ok:true}}}catch(e2){}}
+function fetchWithTimeout(url,ms,opts){
+  const ctrl=new AbortController();const t=setTimeout(()=>ctrl.abort(),ms);
+  return fetch(url,Object.assign({signal:ctrl.signal,cache:"no-store"},opts||{})).finally(()=>clearTimeout(t));
+}
+function bust(u){return u+(u.includes("?")?"&":"?")+"t="+Date.now()}
+
+// Fuentes del snapshot: primero el repositorio (raw.githubusercontent.com permite CORS y sirve
+// siempre el último commit), luego el mismo sitio (GitHub Pages / servidor estático).
+function snapshotSources(){
+  const out=[];
+  const cfg=(db.config.snapshotUrl||"").trim();
+  if(cfg)out.push({name:"snapshot GitHub",url:cfg});
+  if(/^https?:$/.test(location.protocol)){
+    const local=new URL(SNAPSHOT_FILE,location.href).href;
+    if(local!==cfg)out.push({name:"snapshot del sitio",url:local});
   }
-  throw lastErr||new Error("Sin acceso al catálogo público");
+  return out;
+}
+
+// Acepta el formato nuevo {updatedAt, products:[...]} y el viejo (array plano).
+function normalizeSnapshot(j){
+  const list=Array.isArray(j)?j:(j&&Array.isArray(j.products)?j.products:[]);
+  const items=list.map(p=>({slug:String(p.slug||""),name:String(p.name||""),price:Number(p.price),currency:p.currency||"ARS",stock:(p.stock==null||p.stock==="")?null:parseInt(p.stock,10),availability:String(p.availability||"").split("/").pop()==="OutOfStock"?"OutOfStock":"InStock",image:p.image||"",description:String(p.description||"").slice(0,400),weight:(p.weight==null||p.weight==="")?null:Number(p.weight)})).filter(p=>p.slug&&p.name&&!isNaN(p.price));
+  items.forEach(p=>{if(p.stock!=null&&p.stock<=0)p.availability="OutOfStock"});
+  return {items,updatedAt:(!Array.isArray(j)&&j&&j.updatedAt)?j.updatedAt:null};
+}
+
+async function fetchSnapshot(){
+  let lastErr=null;
+  for(const s of snapshotSources()){
+    try{
+      const r=await fetchWithTimeout(bust(s.url),12000);
+      if(!r.ok)throw new Error("HTTP "+r.status);
+      const {items,updatedAt}=normalizeSnapshot(await r.json());
+      if(!items.length)throw new Error("snapshot vacío");
+      return {items,updatedAt,source:s.name,live:false};
+    }catch(e){lastErr=new Error(s.name+": "+(e.name==="AbortError"?"tiempo de espera agotado":(e.message||e)))}
+  }
+  throw lastErr||new Error("sin fuente de snapshot configurada");
+}
+
+// Lectura en vivo de la página pública de la tienda (JSON-LD). Los navegadores bloquean la
+// llamada directa por CORS; por eso se intenta a través de proxies públicos (pueden estar caídos).
+async function fetchLive(){
+  const chain=(db.config.mode||"auto")==="directo"?[{name:"directo",build:u=>u}]:PROXIES;
+  let lastErr=null;
+  for(const p of chain){
+    try{
+      const r=await fetchWithTimeout(p.build(CATALOG_URL),10000);
+      if(!r.ok)throw new Error("HTTP "+r.status);
+      const text=await r.text();
+      if(!text||!text.includes("structured-data.item"))throw new Error("respuesta sin catálogo");
+      const items=parseCatalog(text);
+      if(!items.length)throw new Error("sin productos");
+      return {items,updatedAt:new Date().toISOString(),source:"en vivo · "+p.name,live:true};
+    }catch(e){lastErr=new Error(p.name+": "+(e.name==="AbortError"?"tiempo de espera agotado":(e.message||e)))}
+  }
+  throw lastErr||new Error("sin acceso en vivo");
 }
 
 function parseCatalog(html){
@@ -316,51 +451,77 @@ function parseCatalog(html){
       const id=(j.mainEntityOfPage&&j.mainEntityOfPage["@id"])||"";
       const m=id.match(/productos\/([a-z0-9\-]+)\//);
       const inv=j.offers.inventoryLevel?j.offers.inventoryLevel.value:null;
-      out.push({slug:m?m[1]:"p_"+Math.random().toString(36).slice(2,7),name:j.name,price:parseFloat(j.offers.price),currency:j.offers.priceCurrency||"ARS",stock:inv!=null?parseInt(inv):null,availability:(j.offers.availability||"").split("/").pop()==="OutOfStock"?"OutOfStock":"InStock",image:j.image||"",description:(j.description||"").slice(0,400)});
+      const stock=(inv!=null&&inv!=="")?parseInt(inv,10):null;
+      const image=Array.isArray(j.image)?j.image[0]:j.image;
+      out.push({slug:m?m[1]:"p_"+Math.random().toString(36).slice(2,7),name:j.name,price:parseFloat(j.offers.price),currency:j.offers.priceCurrency||"ARS",stock,availability:((j.offers.availability||"").split("/").pop()==="OutOfStock"||(stock!=null&&stock<=0))?"OutOfStock":"InStock",image:image||"",description:(j.description||"").slice(0,400),weight:(j.weight&&j.weight.value!=null)?Number(j.weight.value):null});
     }catch(e){}
   }
   return out;
 }
 
+function applyCatalog(items){
+  let added=0,updated=0;const bySlug={};db.products.forEach(p=>bySlug[p.slug]=p);
+  for(const it of items){
+    const ex=bySlug[it.slug];
+    if(ex){
+      ex.price=it.price;ex.stock=it.stock;ex.availability=it.availability;ex.currency=it.currency||ex.currency;
+      ex.image=it.image||ex.image;ex.description=it.description||ex.description;if(it.weight!=null)ex.weight=it.weight;
+      if(it.name&&ex.name!==it.name)ex.name=it.name;
+      if(!Array.isArray(ex.themes))ex.themes=themesFor(ex.slug,ex.name);
+      ex.fresh=true;updated++;
+    }else{
+      db.products.push({id:"p_"+it.slug,slug:it.slug,name:it.name,price:it.price,stock:it.stock,availability:it.availability,image:it.image,description:it.description,currency:it.currency,weight:it.weight,crmPrice:null,status:"activo",category:"Importado en vivo",themes:themesFor(it.slug,it.name),note:""});
+      added++;
+    }
+  }
+  return {added,updated};
+}
+
+function logSync(ok,source,added,updated,message){db.syncLog.unshift({ts:Date.now(),ok,source,added,updated,message});db.syncLog=db.syncLog.slice(0,60)}
+
+function commitSync(res){
+  const {added,updated}=applyCatalog(res.items);
+  db.lastSync=Date.now();db.lastSource=res.source;
+  if(res.updatedAt)db.catalogUpdatedAt=res.updatedAt;
+  if(res.live)db.liveStatus={ok:true,ts:Date.now(),msg:res.source};
+  logSync(true,res.source,added,updated,(res.live?"Catálogo leído en vivo desde la tienda":"Catálogo sincronizado desde el snapshot del repositorio (GitHub Actions)")+(res.updatedAt?" · datos de la tienda al "+fmtDT(res.updatedAt):"")+" · "+res.items.length+" productos");
+  save();
+  setPill("on",(res.live?"En línea · ":"Sincronizado · ")+res.source.replace(/^en vivo · /,""));
+  return {added,updated};
+}
+
+// Sincronización: en modo auto/snapshot lee el snapshot del repositorio (rápido, sin CORS) y,
+// en modo auto, intenta además la lectura en vivo en segundo plano sin bloquear la interfaz.
 async function syncNow(manual,quiet){
   if(busy)return;busy=true;
   setPill("warn","Sincronizando…");
-  const ts=Date.now();
+  const mode=db.config.mode||"auto";
   try{
-    const res=await fetchCatalogRaw();
-    const items=parseCatalog(res.html);
-    if(!items.length)throw new Error("No se encontraron productos en "+CATALOG_URL);
-    let added=0,updated=0;
-    const bySlug={};
-    db.products.forEach(p=>bySlug[p.slug]=p);
-    for(const it of items){
-      const ex=bySlug[it.slug];
-      if(ex){
-        ex.price=it.price;ex.stock=it.stock;ex.availability=it.availability;
-        ex.image=it.image||ex.image;ex.description=it.description||ex.description;ex.currency=it.currency;
-        bySlug[it.slug].fresh=true;updated++;
-      }else{
-        db.products.push({id:"p_"+it.slug,slug:it.slug,name:it.name,price:it.price,stock:it.stock,availability:it.availability,image:it.image,description:it.description,currency:it.currency,crmPrice:null,status:"activo",category:"Importado en vivo",note:""});
-        added++;
-      }
-    }
-    db.lastSync=ts;
-    db.lastSource=res.proxy;
-    db.syncLog.unshift({ts,ok:true,source:res.proxy,added,updated,message:"Sincronización en tiempo real con el catálogo público ("+CATALOG_URL+")"});
-    db.syncLog=db.syncLog.slice(0,60);
-    save();
-    setPill("on","En línea · "+res.proxy);
-    if(!quiet)toast("Sincronizado: "+added+" producto(s) nuevo(s), "+updated+" actualizado(s). "+items.length+" catálogo en vivo.","ok");
+    const res=mode==="directo"?await fetchLive():await fetchSnapshot();
+    const {added,updated}=commitSync(res);
+    if(!quiet)toast("Sincronizado ("+res.source+"): "+added+" nuevo(s), "+updated+" actualizado(s)"+(res.updatedAt&&!res.live?" · catálogo al "+fmtDT(res.updatedAt):"")+".","ok");
     if(manual)render();
+    if(mode==="auto")tryLive(quiet);
   }catch(e){
-    db.lastSync=db.lastSync;db.lastSource="caché";
-    db.syncLog.unshift({ts,ok:false,source:db.lastSource||"cache",added:0,updated:0,message:"Falla de conexión: "+(e.message||"desconocido")+" · se trabaja con caché local + snapshot"});
-    db.syncLog=db.syncLog.slice(0,60);save();
+    db.lastSource="caché";
+    logSync(false,"caché",0,0,"Falla de conexión: "+(e.message||"desconocido")+" · se trabaja con caché local");
+    save();
     setPill("err","Caché local");
-    if(!quiet)toast("No se pudo conectar ahora ("+(e.message||"")+"). Operando con datos cacheados.","err");
-  }finally{
-    busy=false;paintLastSync();
-  }
+    if(!quiet)toast("No se pudo sincronizar ("+(e.message||"")+"). Operando con datos cacheados.","err");
+    if(manual)render();
+  }finally{busy=false;paintLastSync()}
+}
+
+async function tryLive(quiet){
+  if(liveBusy)return;liveBusy=true;
+  try{
+    const res=await fetchLive();
+    commitSync(res);
+    if(view==="dash"||view==="prod")render();
+    if(!quiet)toast("Catálogo en vivo actualizado ("+res.source+").","ok");
+  }catch(e){
+    db.liveStatus={ok:false,ts:Date.now(),msg:e.message||"sin acceso"};save();
+  }finally{liveBusy=false;paintLastSync()}
 }
 
 function setPill(cls,label){
@@ -368,13 +529,57 @@ function setPill(cls,label){
   d.className="dot "+cls;l.textContent=label;
 }
 function paintLastSync(){
-  const el=document.getElementById("sync-last");
-  el.textContent=db.lastSync?("Últ. sync: "+ago(db.lastSync))+ (db.lastSource&&db.lastSource!=="caché"?" · vía "+db.lastSource:""):"Sin sincronizar aún";
+  const el=document.getElementById("sync-last");if(!el)return;
+  let t=db.lastSync?"Últ. sync: "+ago(db.lastSync)+(db.lastSource&&db.lastSource!=="caché"?" · "+db.lastSource:""):"Sin sincronizar aún";
+  if(db.catalogUpdatedAt)t+="\nCatálogo tienda: "+fmtDT(db.catalogUpdatedAt);
+  el.style.whiteSpace="pre-line";el.textContent=t;
 }
 
 function totalOf(o){return o.items.reduce((a,i)=>a+i.price*i.qty,0)}
 function custOf(id){return db.customers.find(c=>c.id===id)}
 function prodPriceBuy(p){return p.crmPrice!=null?p.crmPrice:p.price}
+function productByName(name){const n=norm(name);if(!n)return null;return db.products.find(p=>norm(p.name)===n)||db.products.find(p=>norm(p.name).startsWith(n)||n.startsWith(norm(p.name)))||null}
+
+// Análisis del historial de compras de un cliente: temáticas preferidas, títulos y sugerencias.
+function prefsOf(c){
+  const orders=db.orders.filter(o=>o.customerId===c.id);
+  const valid=orders.filter(o=>o.status!=="cancelado");
+  const themeU={},titles={},chan={},bought=new Set();let units=0,spent=0;
+  valid.forEach(o=>{
+    spent+=totalOf(o);const ch=o.channel||"—";chan[ch]=(chan[ch]||0)+1;
+    (o.items||[]).forEach(i=>{
+      const q=Number(i.qty)||1;units+=q;titles[i.name]=(titles[i.name]||0)+q;
+      const p=productByName(i.name);
+      const th=p&&p.themes&&p.themes.length?p.themes:["sin"];
+      if(p)bought.add(p.slug);
+      th.forEach(k=>themeU[k]=(themeU[k]||0)+q);
+    });
+  });
+  const tot=Object.values(themeU).reduce((a,b)=>a+b,0);
+  const themes=Object.entries(themeU).map(([k,u])=>{const t=themeOf(k);return {key:k,label:t?t.label:"Sin temática",icon:t?t.icon:"📦",color:t?t.color:"#b9c2c0",units:u,pct:tot?Math.round(u/tot*100):0}}).sort((a,b)=>b.units-a.units);
+  const top=Object.entries(titles).map(([name,u])=>({name,units:u})).sort((a,b)=>b.units-a.units);
+  const fav=themes.find(t=>t.key!=="sin")||null;
+  const suggestions=fav?db.products.filter(p=>p.status==="activo"&&(p.themes||[]).includes(fav.key)&&!bought.has(p.slug)).slice(0,3):[];
+  const last=valid.map(o=>o.date).sort().pop()||null;
+  const favChannel=Object.entries(chan).sort((a,b)=>b[1]-a[1])[0];
+  return {orders:orders.length,valid:valid.length,units,spent,themes,top,fav,suggestions,last,channel:favChannel?favChannel[0]:null,ticket:valid.length?spent/valid.length:0};
+}
+function prefSummary(pr){
+  if(!pr.units)return '<span class="xs mut">Sin compras aún</span>';
+  const th=pr.themes.slice(0,2).map(t=>'<span class="badge b-'+(themeOf(t.key)?t.key:"sin")+'">'+t.icon+' '+esc(t.label)+' '+t.pct+'%</span>').join(" ");
+  const t0=pr.top[0];
+  return th+'<div class="xs mut" style="margin-top:3px">Más comprado: '+esc(t0.name)+(t0.units>1?" ×"+t0.units:"")+'</div>';
+}
+function prefBars(themes){
+  if(!themes.length)return '<div class="xs mut">Sin compras registradas.</div>';
+  return themes.map(t=>'<div class="pref-bar"><span class="lab">'+t.icon+' '+esc(t.label)+'</span><div class="trk"><div class="fil" style="width:'+t.pct+'%;background:'+t.color+'"></div></div><span class="pct">'+t.pct+'%'+(t.units!=null?' · '+t.units+' u.':'')+'</span></div>').join("");
+}
+function themeSales(){
+  const u={};
+  db.orders.filter(o=>o.status!=="cancelado").forEach(o=>(o.items||[]).forEach(i=>{const p=productByName(i.name);const th=p&&p.themes&&p.themes.length?p.themes:["sin"];th.forEach(k=>u[k]=(u[k]||0)+(Number(i.qty)||1))}));
+  const tot=Object.values(u).reduce((a,b)=>a+b,0);
+  return [...THEMES.map(t=>({key:t.key,label:t.label,icon:t.icon,color:t.color,units:u[t.key]||0})),{key:"sin",label:"Sin temática",icon:"📦",color:"#b9c2c0",units:u.sin||0}].map(t=>Object.assign(t,{pct:tot?Math.round(t.units/tot*100):0}));
+}
 
 function seg(c){
   const spent=db.orders.filter(o=>o.customerId===c.id&&o.status!=="cancelado").reduce((a,o)=>a+totalOf(o),0);
@@ -420,6 +625,7 @@ function dashHTML(){
   const ing=all.reduce((a,o)=>a+totalOf(o),0);
   const pubs=db.products.filter(p=>p.status==="activo").length;
   const low=db.products.filter(p=>p.stock!=null&&p.stock<50&&p.availability==="InStock");
+  const outS=db.products.filter(isOut);
   const stockU=db.products.reduce((a,p)=>a+(p.stock||0),0);
   const newC=db.customers.filter(c=>(Date.now()-new Date(c.joined).getTime())<15*864e5).length;
   const bars=weekSeries();const max=Math.max(1,...bars.map(b=>b.sum));
@@ -463,7 +669,7 @@ function dashHTML(){
     ${kpi("Ticket promedio",fmt(all.length?ing/all.length:0),'')}
     ${kpi("Clientes",db.customers.length,newC+" nuevos en 15 días")}
     ${kpi("Productos activos",pubs,'catálogo en vivo')}
-    ${kpi("Stock total (unid.)",stockU.toLocaleString("es-AR"),low.length+" productos bajo 50 unid.")}
+    ${kpi("Stock total (unid.)",stockU.toLocaleString("es-AR"),low.length+" bajo 50 unid. · "+outS.length+" sin stock")}
   </div>
   <div class="card sync-strip">
     <div class="rowc">
@@ -503,6 +709,10 @@ function dashHTML(){
     ${topHTML}
   </div>
   <div class="card">
+    <div class="rowc" style="justify-content:space-between;margin-bottom:10px"><b>Ventas por temática (unidades)</b><span class="xs mut">preferencias agregadas de todos los clientes · pedidos no cancelados</span></div>
+    ${prefBars(themeSales())}
+  </div>
+  <div class="card">
     <b style="display:block;margin-bottom:10px">Registro del conector (sync)</b>
     <div>${log}</div>
   </div>`;
@@ -510,57 +720,84 @@ function dashHTML(){
 
 function dayLabel(l){return l==="esta sem"?"esta sem":(l.startsWith("S-")?l.split("-")[1]+" sem":l)}
 
-function prodHTML(){
-  const q=document.getElementById("fq")?document.getElementById("fq").value:"";
-  const fst=document.getElementById("fst")?document.getElementById("fst").value:"all";
-  let list=db.products;
-  if(q)list=list.filter(p=>(p.name+p.slug+(p.category||"")).toLowerCase().includes(q.toLowerCase()));
-  if(fst!=="all")list=list.filter(p=>fst==="bajo"?(p.stock!=null&&p.stock<50):fst==="oculto"?p.status!=="activo":true);
-  const rows=list.map(p=>{
-    const bad=p.availability==="OutOfStock"?'<span class="badge b-rojo">Sin stock</span>':p.stock==null?"—":p.stock<10?'<span class="badge b-rojo">Crítico · '+p.stock+'</span>':p.stock<50?'<span class="badge b-amarillo">Bajo · '+p.stock+'</span>':'<span class="badge b-verde">OK · '+p.stock+'</span>';
-    const st=p.status==="activo"?'<span class="badge b-verde">Activo</span>':p.status==="oculto"?'<span class="badge b-gris">Oculto</span>':'<span class="badge b-rojo">Retirado</span>';
-    return `<tr>
+function prodRow(p){
+  const out=isOut(p);
+  const bad=out?'<span class="badge b-rojo">Sin stock · 0</span>':p.stock==null?"—":p.stock<10?'<span class="badge b-rojo">Crítico · '+p.stock+'</span>':p.stock<50?'<span class="badge b-amarillo">Bajo · '+p.stock+'</span>':'<span class="badge b-verde">OK · '+p.stock+'</span>';
+  const st=p.status==="activo"?'<span class="badge b-verde">Activo</span>':p.status==="oculto"?'<span class="badge b-gris">Oculto</span>':'<span class="badge b-rojo">Retirado</span>';
+  return `<tr>
       <td><img class="thumb" src="${esc(p.image)}" onerror="this.style.opacity=.25"></td>
-      <td><b>${esc(p.name)}</b><div class="xs mut">${esc(p.slug)} · ${esc(p.category||"")} ${p.crmPrice!=null?'<span class="badge b-azul">precio CRM</span>':""}</div></td>
-      <td>${fmt(p.price)}${p.price!==prodPriceBuy(p)?'<div class="xs mut" style="text-decoration:line-through">'+fmt(prodPriceBuy(p))+'</div>':""}</td>
-      <td>${esc(p.image||"")?"":""}${bad}</td>
+      <td><b>${esc(p.name)}</b><div class="xs mut">${esc(p.slug)} ${p.crmPrice!=null?'<span class="badge b-azul">precio CRM</span>':""}</div></td>
+      <td>${themeBadges(p)}</td>
+      <td><div>${fmt(p.price)}</div>${out?'<span class="sin-stock">Sin Stock</span>':""}${p.crmPrice!=null&&p.crmPrice!==p.price?'<div class="xs mut">CRM: '+fmt(p.crmPrice)+'</div>':""}</td>
+      <td>${bad}</td>
       <td>${st}</td>
       <td><button class="btn sm" onclick="editProd('${p.id}')">Editar</button></td>
     </tr>`;
+}
+
+// Tabla de productos organizada por temática (Viajes · Familia · Cocina · Sin temática).
+function prodHTML(){
+  const q=document.getElementById("fq")?document.getElementById("fq").value:"";
+  const fst=document.getElementById("fst")?document.getElementById("fst").value:"all";
+  const ft=document.getElementById("ftema")?document.getElementById("ftema").value:"all";
+  let list=db.products;
+  if(q)list=list.filter(p=>(p.name+" "+p.slug+" "+(p.category||"")+" "+themeLabels(p)).toLowerCase().includes(q.toLowerCase()));
+  if(fst!=="all")list=list.filter(p=>fst==="bajo"?(p.stock!=null&&p.stock<50):fst==="sin"?isOut(p):fst==="oculto"?p.status!=="activo":true);
+  const pos=(order,s)=>{const i=order.findIndex(o=>o===s||baseSlug(o)===baseSlug(s));return i<0?99:i};
+  const groups=[];
+  THEMES.forEach(t=>{
+    if(ft!=="all"&&ft!==t.key)return;
+    const order=THEME_BOOKS[t.key]||[];
+    groups.push({t,items:list.filter(p=>(p.themes||[]).includes(t.key)).sort((a,b)=>pos(order,a.slug)-pos(order,b.slug)||a.name.localeCompare(b.name))});
+  });
+  if(ft==="all"||ft==="sin")groups.push({t:{key:"sin",label:"Sin temática asignada",icon:"📦"},items:list.filter(p=>!(p.themes||[]).some(k=>themeOf(k))).sort((a,b)=>a.name.localeCompare(b.name))});
+  const rows=groups.filter(g=>g.items.length).map(g=>{
+    const stockG=g.items.reduce((a,p)=>a+(p.stock||0),0);
+    const outN=g.items.filter(isOut).length;
+    return `<tr class="tema-row"><td colspan="7">${g.t.icon} ${esc(g.t.label)}<span class="xs">${g.items.length} título${g.items.length===1?"":"s"} · stock ${stockG.toLocaleString("es-AR")} unid.${outN?' · <span style="color:#e13030">'+outN+' sin stock</span>':""}</span></td></tr>`+g.items.map(prodRow).join("");
   }).join("");
   return `
-  <div class="head"><div><h2>Productos</h2><div class="meta">${db.products.length} SKU · catálogo sincronizado en vivo con ${SHOP_URL}/productos</div></div>
+  <div class="head"><div><h2>Productos</h2><div class="meta">${db.products.length} SKU · organizados por temática (${THEMES.map(t=>t.label).join(" · ")}) · catálogo sincronizado con ${SHOP_URL}productos</div></div>
   <button class="btn pri" onclick="syncNow(true,true).then(()=>render())" ${busy?"disabled":""}>⟳ Sincronizar</button></div>
   <div class="card">
     <div class="toolbar">
-      <input id="fq" placeholder="Buscar producto..." value="${esc(q)}" oninput="dRender()" onkeydown="if(event.key==='Enter')render()">
+      <input id="fq" placeholder="Buscar producto o temática..." value="${esc(q)}" oninput="dRender()" onkeydown="if(event.key==='Enter')render()">
+      <select id="ftema" onchange="render()">
+        <option value="all" ${ft==="all"?"selected":""}>Todas las temáticas</option>
+        ${THEMES.map(t=>`<option value="${t.key}" ${ft===t.key?"selected":""}>${t.icon} ${t.label}</option>`).join("")}
+        <option value="sin" ${ft==="sin"?"selected":""}>📦 Sin temática</option>
+      </select>
       <select id="fst" onchange="render()">
-        <option value="all" ${fst==="all"?"selected":""}>Todos</option>
+        <option value="all" ${fst==="all"?"selected":""}>Todo el stock</option>
         <option value="bajo" ${fst==="bajo"?"selected":""}>Stock bajo (&lt;50)</option>
+        <option value="sin" ${fst==="sin"?"selected":""}>Sin stock (0)</option>
         <option value="oculto" ${fst==="oculto"?"selected":""}>No activos</option>
       </select>
     </div>
     <div style="overflow-x:auto"><table>
-      <thead><tr><th></th><th>Producto</th><th>Precio (tienda)</th><th>Stock</th><th>Estado</th><th></th></tr></thead>
-      <tbody>${rows||"<tr><td colspan=6 class='mut'>Sin resultados</td></tr>"}</tbody>
+      <thead><tr><th></th><th>Producto</th><th>Temática</th><th>Precio (tienda)</th><th>Stock</th><th>Estado</th><th></th></tr></thead>
+      <tbody>${rows||"<tr><td colspan=7 class='mut'>Sin resultados</td></tr>"}</tbody>
     </table></div>
-    <div class="xs mut" style="margin-top:10px">Precios y stock provienen del catálogo público; "precio CRM" es un override interno para pedidos. Cambios en la tienda aparecen al sincronizar.</div>
+    <div class="xs mut" style="margin-top:10px">Precios y stock provienen del catálogo de la tienda; con 0 unidades disponibles se muestra <span class="sin-stock" style="display:inline">Sin Stock</span> debajo del precio. Un título puede estar en más de una temática (ej. «Hay equipo ¡a cocinar!» en Familia y Cocina); la temática se cambia desde «Editar». "Precio CRM" es un override interno para pedidos.</div>
   </div>`;
 }
 
 function dRender(){
   const q=document.getElementById("fq").value;
   render();
-  const inp=document.getElementById("fq");if(inp)inp.value=q;
+  const inp=document.getElementById("fq");if(inp){inp.value=q;inp.focus();inp.setSelectionRange(q.length,q.length)}
 }
 
 function editProd(id){
   const p=db.products.find(x=>x.id===id);
   openModal(`
     <h3>Editar producto</h3>
-    <img src="${esc(p.image)}" style="max-width:120px;border-radius:8px;float:right">
+    <img src="${esc(p.image)}" style="max-width:120px;border-radius:8px;float:right" onerror="this.style.display='none'">
     <label>Nombre (tienda)</label><input disabled value="${esc(p.name)}">
     <label>Precio tienda (vivo)</label><input disabled value="${fmt(p.price)}">
+    ${isOut(p)?'<span class="sin-stock">Sin Stock</span>':'<div class="xs mut" style="margin-top:4px">Stock disponible: '+(p.stock==null?"—":p.stock)+' unid.</div>'}
+    <label>Temáticas</label>
+    <div class="themes-check">${THEMES.map(t=>`<label><input type="checkbox" class="mp-tema" value="${t.key}" ${(p.themes||[]).includes(t.key)?"checked":""}> ${t.icon} ${t.label}</label>`).join("")}</div>
     <label>Precio CRM (override)</label><input id="mp-crm" type="number" step="100" value="${p.crmPrice!=null?p.crmPrice:""}" placeholder="vacío = usar precio de tienda">
     <label>Estado CRM</label>
     <select id="mp-st">
@@ -577,6 +814,7 @@ function saveProd(id){
   p.crmPrice=document.getElementById("mp-crm").value?Number(document.getElementById("mp-crm").value):null;
   p.status=document.getElementById("mp-st").value;
   p.note=document.getElementById("mp-note").value.trim();
+  p.themes=[...document.querySelectorAll(".mp-tema:checked")].map(x=>x.value);p.themesManual=true;
   save();closeModal();render();toast("Producto actualizado.","ok");
 }
 
@@ -589,7 +827,7 @@ function ordHTML(){
     const c=custOf(o.customerId);
     return `<tr>
       <td><b>${o.number||o.id}</b><div class="xs mut">${fmtD(o.date)}</div></td>
-      <td>${esc(c?c.name:"—")}${o.demo?' <span class="demo-tag">demo</span>':""}</td>
+      <td>${esc(c?fullName(c):"—")}${o.demo?' <span class="demo-tag">demo</span>':""}${c&&c.email?'<div class="xs mut">'+esc(c.email)+'</div>':""}</td>
       <td class="sm">${o.items.map(i=>esc(i.name)+" x"+i.qty).join("<br>")}</td>
       <td><b>${fmt(totalOf(o))}</b></td>
       <td>${stB[o.status]||esc(o.status)}</td>
@@ -625,8 +863,8 @@ function setStatus(id,s){
 }
 
 function addOrderModal(){
-  const prods=db.products.filter(p=>p.status==="activo").map(p=>`<option value="${p.id}">${esc(p.name)} · ${fmt(prodPriceBuy(p))}</option>`).join("");
-  const custs=db.customers.map(c=>`<option value="${c.id}">${esc(c.name)}</option>`).join("");
+  const prods=db.products.filter(p=>p.status==="activo").map(p=>`<option value="${p.id}">${esc(p.name)} · ${fmt(prodPriceBuy(p))}${isOut(p)?" · SIN STOCK":""}</option>`).join("");
+  const custs=[...db.customers].sort((a,b)=>fullName(a).localeCompare(fullName(b))).map(c=>`<option value="${c.id}">${esc(fullName(c))}${c.email?" · "+esc(c.email):""}</option>`).join("");
   openModal(`
     <h3>Nuevo pedido (en vivo)</h3>
     <label>Cliente</label><select id="no-cust">${custs}</select>
@@ -661,9 +899,14 @@ async function syncOrders(){
         const cust=o.customer||{};
         let c=null;
         if(cust.email){
-          c=db.customers.find(x=>x.email===cust.email);
-          if(!c){c={id:uid("c"),name:((cust.name||cust.first_name+" "+(cust.last_name||"")).trim())||"Cliente Tienda Nube",email:cust.email,phone:cust.phone||"",source:"Tienda Nube API",joined:new Date().toISOString(),tags:"",note:"Importado desde API privada",segment:"",demo:false};db.customers.push(c);custs++}
-        }else c={id:uid("c"),name:"Cliente Tienda Nube",email:"",phone:"",source:"Tienda Nube API",joined:new Date().toISOString(),tags:"",note:"",segment:"",demo:false};
+          // Vinculación por email registrado: si ya existe el cliente, el pedido se asocia a su nombre y apellido.
+          c=findByEmail(cust.email);
+          if(!c){
+            const sn=(cust.first_name||cust.last_name)?{firstName:cust.first_name||"",lastName:cust.last_name||""}:splitName(cust.name||"");
+            c={id:uid("c"),firstName:sn.firstName||"Cliente",lastName:sn.lastName||"",name:"",email:emailKey(cust.email),phone:cust.phone||"",source:"Tienda Nube API",joined:new Date().toISOString(),tags:"",note:"Importado desde API privada",segment:"",demo:false};
+            c.name=fullName(c);db.customers.push(c);custs++;
+          }
+        }else{c={id:uid("c"),firstName:"Cliente",lastName:"Tienda Nube",name:"Cliente Tienda Nube",email:"",phone:"",source:"Tienda Nube API",joined:new Date().toISOString(),tags:"",note:"Pedido importado sin email",segment:"",demo:false};db.customers.push(c);custs++}
         const items=(o.products_yours||[]).map(p=>({name:p.name,price:Number((p.product&&p.product.price)||0)/100,qty:p.quantity||1})).filter(i=>i.name&&i.price);
         const total=(o.total&&!isNaN(Number(o.total)))?Number(o.total)/100:items.reduce((a,i)=>a+i.price*i.qty,0);
         db.orders.push({id,number:o.number||id,date:o.created_at||new Date().toISOString(),customerId:c.id,items:items.length?items:o.products&&o.products.length?o.products.map(p=>({name:p.name||"Producto",price:0,qty:p.quantity||1})):[{name:"Pedido de la tienda",price:0,qty:1}],status:(o.status||"pagado")==="paid"?"pagado":(o.status||"pagado"),channel:"Tienda online",demo:false});
@@ -680,55 +923,93 @@ async function syncOrders(){
   }finally{if(btn)btn.textContent="↻ Sincronizar pedidos API privada"}
 }
 
+function segBadge(s){return s==="VIP"?'<span class="badge b-rojo">VIP</span>':s==="Frecuente"?'<span class="badge b-azul">Frecuente</span>':s==="Activo"?'<span class="badge b-verde">Activo</span>':'<span class="badge b-gris">Nuevo</span>'}
+
+// Clientes: nombre y apellido vinculados al email registrado + preferencias según historial de compras.
 function cliHTML(){
   const q=document.getElementById("cq")?document.getElementById("cq").value:"";
-  let list=db.customers.map(c=>({c,seg:seg(c),spent:db.orders.filter(o=>o.customerId===c.id&&o.status!=="cancelado").reduce((a,o)=>a+totalOf(o),0),n:db.orders.filter(o=>o.customerId===c.id).length}));
-  if(q)list=list.filter(x=>(x.c.name+" "+(x.c.email||"")).toLowerCase().includes(q.toLowerCase()));
-  const rows=list.sort((a,b)=>b.spent-a.spent).map(x=>`
+  const so=document.getElementById("cso")?document.getElementById("cso").value:"gasto";
+  let list=db.customers.map(c=>{const pr=prefsOf(c);return {c,seg:seg(c),pr,spent:pr.spent,n:pr.orders}});
+  if(q){const k=q.toLowerCase();list=list.filter(x=>(fullName(x.c)+" "+(x.c.email||"")+" "+(x.c.tags||"")+" "+(x.pr.fav?x.pr.fav.label:"")).toLowerCase().includes(k))}
+  const byLast=x=>((x.c.lastName||"")+" "+(x.c.firstName||"")).trim()||fullName(x.c);
+  list.sort((a,b)=>so==="apellido"?byLast(a).localeCompare(byLast(b)):so==="ultima"?String(b.pr.last||"").localeCompare(String(a.pr.last||"")):b.spent-a.spent);
+  const rows=list.map(x=>`
     <tr>
-      <td><b>${esc(x.c.name)}</b><div class="xs mut">${esc(x.c.email||"sin email")}</div></td>
+      <td><b>${esc((x.c.lastName&&x.c.firstName)?x.c.lastName+", "+x.c.firstName:fullName(x.c))}</b>${x.c.demo?' <span class="demo-tag">demo</span>':""}<div class="xs mut">${x.c.email?'<a href="mailto:'+esc(x.c.email)+'" style="color:inherit">'+esc(x.c.email)+'</a>':'<span style="color:#B02A24">sin email registrado</span>'}${x.c.tags?' · '+esc(x.c.tags):""}</div></td>
       <td>${esc(x.c.source||"")}</td>
-      <td>${x.n}</td>
+      <td>${x.n}${x.pr.last?'<div class="xs mut">últ. '+fmtD(x.pr.last)+'</div>':""}</td>
       <td>${fmt(x.spent)}</td>
-      <td>${x.seg==="VIP"?'<span class="badge b-rojo">VIP</span>':x.seg==="Frecuente"?'<span class="badge b-azul">Frecuente</span>':x.seg==="Activo"?'<span class="badge b-verde">Activo</span>':'<span class="badge b-gris">Nuevo</span>'}</td>
-      <td class="sm mut">${esc(x.c.tags||"")||"—"}</td>
-      <td><button class="btn sm" onclick="editCli('${x.c.id}')">Nota</button></td>
+      <td>${segBadge(x.seg)}</td>
+      <td>${prefSummary(x.pr)}</td>
+      <td><button class="btn sm" onclick="editCli('${x.c.id}')">Ficha</button></td>
     </tr>`).join("");
+  const withMail=db.customers.filter(c=>c.email).length;
   return `
-  <div class="head"><div><h2>Clientes</h2><div class="meta">${db.customers.length} contactos · segmentación automática por gasto y pedidos</div></div>
-  <div class="rowc"><button class="btn pri" onclick="addLeadModal()">+ Agregar lead</button><button class="btn sm" onclick="go('set')">Exportar</button></div></div>
+  <div class="head"><div><h2>Clientes</h2><div class="meta">${db.customers.length} contactos · ${withMail} con email registrado · segmentación automática y preferencias según historial de compras</div></div>
+  <div class="rowc"><button class="btn pri" onclick="addLeadModal()">+ Agregar cliente</button><button class="btn sm" onclick="exportCSV('clientes')">⬇ Exportar CSV</button></div></div>
   <div class="card">
-    <div class="toolbar"><input id="cq" placeholder="Buscar cliente..." value="${esc(q)}" oninput="cliUpd()"></div>
+    <div class="toolbar">
+      <input id="cq" placeholder="Buscar por nombre, apellido, email, tag o temática..." value="${esc(q)}" oninput="cliUpd()">
+      <select id="cso" onchange="render()">
+        <option value="gasto" ${so==="gasto"?"selected":""}>Ordenar: mayor gasto</option>
+        <option value="apellido" ${so==="apellido"?"selected":""}>Ordenar: apellido</option>
+        <option value="ultima" ${so==="ultima"?"selected":""}>Ordenar: última compra</option>
+      </select>
+    </div>
     <div style="overflow-x:auto"><table>
-      <thead><tr><th>Cliente</th><th>Origen</th><th>Pedidos</th><th>Gasto</th><th>Segmento</th><th>Tags</th><th></th></tr></thead>
+      <thead><tr><th>Cliente (apellido, nombre · email)</th><th>Origen</th><th>Pedidos</th><th>Gasto</th><th>Segmento</th><th>Preferencias</th><th></th></tr></thead>
       <tbody>${rows||"<tr><td colspan=7 class='mut'>Sin clientes</td></tr>"}</tbody>
     </table></div>
+    <div class="xs mut" style="margin-top:10px">El email registrado es la clave que vincula nombre y apellido con sus pedidos (los importados desde la tienda se asocian por email). Las preferencias se calculan con los libros comprados (pedidos no cancelados) y sus temáticas.</div>
   </div>`;
 }
-function cliUpd(){const q=document.getElementById("cq").value;const list=document.querySelector("#main");render();const i=document.getElementById("cq");if(i)i.value=q}
+function cliUpd(){const q=document.getElementById("cq").value;render();const i=document.getElementById("cq");if(i){i.value=q;i.focus();i.setSelectionRange(q.length,q.length)}}
 
+// Ficha de cliente: datos vinculados, análisis de preferencias e historial de compras.
 function editCli(id){
-  const c=db.customers.find(x=>x.id===id);
+  const c=db.customers.find(x=>x.id===id);if(!c)return;
+  const pr=prefsOf(c);
+  const stB={pendiente:"b-amarillo",pagado:"b-azul",enviado:"b-auto",entregado:"b-verde",cancelado:"b-rojo"};
+  const hist=db.orders.filter(o=>o.customerId===c.id).sort((a,b)=>new Date(b.date)-new Date(a.date)).map(o=>`
+      <div class="hist-item"><span class="d">${fmtD(o.date)}</span><span class="n">${esc(o.number||o.id)}</span><span class="grow">${o.items.map(i=>esc(i.name)+" ×"+i.qty).join("<br>")}</span><span class="badge ${stB[o.status]||"b-gris"}">${esc(o.status)}</span><b>${fmt(totalOf(o))}</b></div>`).join("");
   openModal(`
-    <h3>Ficha de cliente</h3>
-    <b>${esc(c.name)}</b> <span class="xs mut">${esc(c.email||"")} · ${esc(c.phone||"")}</span><br>
-    <div class="xs mut">Origen: ${esc(c.source||"—")} · Alta: ${fmtD(c.joined)} · Segmento: <b>${seg(c)}</b> ${c.demo?'<span class="demo-tag">demo</span>':""}</div>
-    <label>Tags</label><input id="cl-tags" value="${esc((c.tags||"").split(",").slice(0,4).join(", "))}" placeholder="ej: maestra, mayorista, feria">
-    <label>Notas</label><textarea id="cl-note" rows="3">${esc(c.note||"")}</textarea>
+    <h3>Ficha de cliente ${c.demo?'<span class="demo-tag">demo</span>':""}</h3>
+    <div class="rowc"><div class="grow"><label>Nombre</label><input id="cl-first" value="${esc(c.firstName||"")}"></div><div class="grow"><label>Apellido</label><input id="cl-last" value="${esc(c.lastName||"")}"></div></div>
+    <label>Email registrado (vincula al cliente con sus pedidos)</label><input id="cl-email" type="email" value="${esc(c.email||"")}" placeholder="cliente@email.com">
+    <div class="rowc"><div class="grow"><label>Teléfono</label><input id="cl-phone" value="${esc(c.phone||"")}"></div><div class="grow"><label>Origen</label><input id="cl-src" value="${esc(c.source||"")}"></div></div>
+    <div class="xs mut" style="margin-top:8px">Alta: ${fmtD(c.joined)} · Segmento: <b>${seg(c)}</b> · ${pr.valid} pedido(s) válido(s) · ${pr.units} unidad(es) · gasto ${fmt(pr.spent)}${pr.channel?" · canal habitual: "+esc(pr.channel):""}</div>
+    <label>Tags</label><input id="cl-tags" value="${esc(c.tags||"")}" placeholder="ej: maestra, mayorista, feria">
+    <label>Notas</label><textarea id="cl-note" rows="2">${esc(c.note||"")}</textarea>
+    <h4 style="margin:18px 0 8px;color:var(--dark)">📖 Preferencias de lectura</h4>
+    ${pr.units?`
+      ${pr.fav?'<div class="sm" style="margin-bottom:8px">Temática destacada: <span class="badge b-'+pr.fav.key+'">'+pr.fav.icon+' '+esc(pr.fav.label)+' · '+pr.fav.pct+'%</span></div>':'<div class="xs mut" style="margin-bottom:8px">Sus compras no tienen temática asignada.</div>'}
+      ${prefBars(pr.themes)}
+      <div class="xs mut" style="margin:10px 0 4px">Títulos comprados</div>
+      <div class="chips">${pr.top.map(t=>'<span class="chip">'+esc(t.name)+(t.units>1?" ×"+t.units:"")+'</span>').join("")}</div>
+      ${pr.suggestions.length?'<div class="xs mut" style="margin:10px 0 4px">Sugerencias (misma temática, aún no comprados)</div><div class="chips">'+pr.suggestions.map(p=>'<span class="chip sug">'+esc(p.name)+' · '+fmt(prodPriceBuy(p))+(isOut(p)?' · <span class="sin-stock" style="display:inline">Sin Stock</span>':"")+'</span>').join("")+'</div>':""}
+    `:'<div class="xs mut">Todavía no registra compras; las preferencias se calculan automáticamente con cada pedido.</div>'}
+    <h4 style="margin:18px 0 6px;color:var(--dark)">🧾 Historial de compras (${pr.orders})</h4>
+    ${hist||'<div class="xs mut">Sin pedidos.</div>'}
     <div class="act"><button class="btn" onclick="closeModal()">Cancelar</button><button class="btn pri" onclick="saveCli('${c.id}')">Guardar</button></div>
-  `);
+  `,true);
 }
 function saveCli(id){
-  const c=db.customers.find(x=>x.id===id);
-  c.tags=document.getElementById("cl-tags").value.trim();
-  c.note=document.getElementById("cl-note").value.trim();
+  const c=db.customers.find(x=>x.id===id);if(!c)return;
+  const first=document.getElementById("cl-first").value.trim(),last=document.getElementById("cl-last").value.trim(),email=emailKey(document.getElementById("cl-email").value);
+  if(!first&&!last)return toast("Ingresá nombre y apellido.","err");
+  if(email&&!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))return toast("El email no es válido.","err");
+  const dup=email?findByEmail(email,c.id):null;
+  if(dup)return toast("Ese email ya está vinculado a "+fullName(dup)+".","err");
+  c.firstName=first;c.lastName=last;c.email=email;c.name=fullName(c);
+  c.phone=document.getElementById("cl-phone").value.trim();c.source=document.getElementById("cl-src").value.trim();
+  c.tags=document.getElementById("cl-tags").value.trim();c.note=document.getElementById("cl-note").value.trim();
   save();closeModal();render();toast("Cliente actualizado.","ok");
 }
 function addLeadModal(){
   openModal(`
-    <h3>Nuevo lead / cliente</h3>
-    <label>Nombre</label><input id="nl-name">
-    <label>Email</label><input id="nl-email">
+    <h3>Nuevo cliente / lead</h3>
+    <div class="rowc"><div class="grow"><label>Nombre</label><input id="nl-first"></div><div class="grow"><label>Apellido</label><input id="nl-last"></div></div>
+    <label>Email registrado</label><input id="nl-email" type="email" placeholder="cliente@email.com">
     <label>Teléfono</label><input id="nl-phone">
     <label>Origen</label><select id="nl-src"><option>Instagram</option><option>Feria</option><option>WhatsApp</option><option>Recomendación</option><option>Tienda online</option></select>
     <label>Nota</label><textarea id="nl-note" rows="2"></textarea>
@@ -736,10 +1017,15 @@ function addLeadModal(){
   `);
 }
 function saveLead(){
-  const name=document.getElementById("nl-name").value.trim();
-  if(!name)return toast("Poné un nombre","err");
-  db.customers.push({id:uid("c"),name,email:document.getElementById("nl-email").value.trim(),phone:document.getElementById("nl-phone").value.trim(),source:document.getElementById("nl-src").value,joined:new Date().toISOString(),tags:"",note:document.getElementById("nl-note").value.trim(),segment:"",demo:false});
-  save();closeModal();render();toast("Lead guardado en CRM.","ok");
+  const first=document.getElementById("nl-first").value.trim(),last=document.getElementById("nl-last").value.trim(),email=emailKey(document.getElementById("nl-email").value);
+  if(!first)return toast("Poné el nombre del cliente.","err");
+  if(email&&!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))return toast("El email no es válido.","err");
+  const dup=email?findByEmail(email):null;
+  if(dup)return toast("Ese email ya está registrado para "+fullName(dup)+". Abrí su ficha en lugar de duplicarlo.","err");
+  const c={id:uid("c"),firstName:first,lastName:last,name:"",email,phone:document.getElementById("nl-phone").value.trim(),source:document.getElementById("nl-src").value,joined:new Date().toISOString(),tags:"",note:document.getElementById("nl-note").value.trim(),segment:"",demo:false};
+  c.name=fullName(c);
+  db.customers.push(c);
+  save();closeModal();render();toast("Cliente guardado en la CRM.","ok");
 }
 
 function setHTML(){
@@ -748,19 +1034,24 @@ function setHTML(){
   <div class="head"><div><h2>Configuración</h2><div class="meta">Conector de datos, API Tienda Nube, exportación y cuenta admin</div></div></div>
   <div class="grid2">
     <div class="card">
-      <h3 style="margin-bottom:12px;color:var(--dark)">🔌 Conector a la base de datos pública (tiempo real)</h3>
-      <div class="rowc" style="margin-bottom:10px">
+      <h3 style="margin-bottom:12px;color:var(--dark)">🔌 Conector al catálogo de la tienda</h3>
+      <div class="rowc" style="margin-bottom:6px">
         <span class="dot ${db.lastSync?"on":"err"}" style="width:10px;height:10px;display:inline-block"></span>
-        <b class="sm">Estado: ${db.lastSync?"Conectado · "+esc(db.lastSource||""):"Sin sincronizar"}</b>
+        <b class="sm">Estado: ${db.lastSync?"Sincronizado "+ago(db.lastSync)+" · "+esc(db.lastSource||""):"Sin sincronizar"}</b>
       </div>
-      <div class="xs mut" style="margin-bottom:12px">Fuente pública: <b>${esc(CATALOG_URL)}</b> — lee precios, stock y disponibilidad reales del catálogo web. Polling automático (intervalo configurable) = actualización en tiempo real. En producción, esto se reemplaza por webhooks/API con token.</div>
+      ${db.catalogUpdatedAt?`<div class="xs mut" style="margin-bottom:6px">Datos de la tienda al <b>${fmtDT(db.catalogUpdatedAt)}</b> (fecha del snapshot generado por GitHub Actions).</div>`:""}
+      <div class="xs mut" style="margin-bottom:10px">Lectura en vivo (proxy): ${db.liveStatus?(db.liveStatus.ok?'<span style="color:#1F7A56">OK · '+esc(db.liveStatus.msg)+'</span>':'<span style="color:#B02A24">no disponible</span> ('+esc(db.liveStatus.msg)+') · probada '+ago(db.liveStatus.ts)):"todavía no probada"}</div>
+      <div class="xs mut" style="margin-bottom:12px">Cómo funciona: un workflow de GitHub Actions (<b>.github/workflows/sync-catalogo.yml</b>) lee cada 30 minutos el catálogo público <b>${esc(CATALOG_URL)}</b> y guarda <b>${SNAPSHOT_FILE}</b> en el repositorio; la CRM lo descarga desde ahí (sin bloqueos CORS) y, en modo auto, intenta además una lectura en vivo por proxy en segundo plano.</div>
       <label>Intervalo de sincronización (segundos)</label>
       <input id="cf-int" type="number" value="${db.config.syncInterval}" min="30" style="width:140px">
       <label>Modo de conexión</label>
       <select id="cf-mode">
-        <option value="auto" ${db.config.mode==="auto"?"selected":""}>auto (proxy — funciona desde navegador)</option>
-        <option value="directo" ${db.config.mode==="directo"?"selected":""}>directo (servidor local/despliegue con CORS habilitado)</option>
+        <option value="auto" ${db.config.mode==="auto"?"selected":""}>auto (snapshot del repositorio + lectura en vivo por proxy)</option>
+        <option value="snapshot" ${db.config.mode==="snapshot"?"selected":""}>solo snapshot (GitHub Actions)</option>
+        <option value="directo" ${db.config.mode==="directo"?"selected":""}>directo (requiere CORS habilitado / servidor propio)</option>
       </select>
+      <label>URL del snapshot (raw de GitHub)</label>
+      <input id="cf-snap" value="${esc(db.config.snapshotUrl||"")}" placeholder="${esc(REPO_RAW+SNAPSHOT_FILE)}">
       <div class="act" style="justify-content:flex-start">
         <button class="btn dark" onclick="saveCnfg()">Guardar configuración</button>
         <button class="btn pri" onclick="syncNow(true,true).then(()=>render())" ${busy?"disabled":""}>Sincronizar ahora</button>
@@ -805,7 +1096,7 @@ function setHTML(){
     <div class="sm mut" style="line-height:1.7">
       CRM web para <b>${esc(STORE_NAME)}</b> (${esc(STORE)}). Se conecta al catálogo público de la tienda (leído en vivo: precios, stock, foto, descripción) y admite la API privada Tienda Nube v1 para pedidos/clientes con token.<br>
       Sin servidor: toda la "base de datos" local vive en <code>localStorage</code> del navegador y se puede exportar/importar en JSON. Despliegue pensado: GitHub Pages, Netlify o Dropbox (HTML estático).<br>
-      Nota CORS: los navegadores bloquean la llamada directa a mitiendanube.com; por eso el modo auto encadena proxies públicos. Para producción, usar un backend con la API oficial o habilitar CORS.
+      Nota CORS: los navegadores bloquean la llamada directa a mitiendanube.com. Por eso el catálogo se sincroniza con un snapshot que GitHub Actions regenera cada 30 minutos (<code>datos/snapshot-productos.json</code>) y la lectura en vivo por proxies públicos queda como intento secundario. Para producción, usar un backend con la API oficial o webhooks.
     </div>
   </div>`;
 }
@@ -813,7 +1104,8 @@ function setHTML(){
 function saveCnfg(){
   db.config.syncInterval=Math.max(30,parseInt(document.getElementById("cf-int").value)||60);
   db.config.mode=document.getElementById("cf-mode").value;
-  save();startTimer();syncNow(true,true).then(()=>render()).catch(()=>render());toast("Configuración guardada.","ok");
+  db.config.snapshotUrl=document.getElementById("cf-snap").value.trim();
+  save();startTimer();toast("Configuración guardada.","ok");syncNow(true,true).then(()=>render());
 }
 function saveToken(){
   const t=document.getElementById("cf-tn").value.trim();
@@ -831,12 +1123,13 @@ async function saveAdmin(){
 function exportCSV(kind){
   const rows=[];
   const head=s=>rows.push(s);
-  if(kind==="clientes"){head("id,nombre,email,telefono,origen,segmento,tags,pedidos,gasto_total,notas");
-    db.customers.forEach(c=>rows.push([c.id,c.name,c.email,c.phone,c.source,seg(c),(c.tags||"").replace(/"/g,"'"),db.orders.filter(o=>o.customerId===c.id).length,c.spent||db.orders.filter(o=>o.customerId===c.id&&o.status!=="cancelado").reduce((a,o)=>a+totalOf(o),0),(c.note||"").replace(/"/g,"'")].map(x=>'"'+String(x).replace(/"/g,'""')+'"').join(",")));}
-  if(kind==="pedidos"){head("numero,fecha,cliente,canal,estado,items,total");
-    db.orders.forEach(o=>{const c=custOf(o.customerId);rows.push([o.number,o.date,c?c.name:"",o.channel,o.status,o.items.map(i=>i.name+" x"+i.qty).join("; "),totalOf(o)].map(x=>'"'+String(x).replace(/"/g,'""')+'"').join(","))});}
-  if(kind==="productos"){head("nombre,precio_tienda,precio_crm,stock,disponible_sesam,estado,slug");
-    db.products.forEach(p=>rows.push([p.name,p.price,p.crmPrice||"",p.stock,p.availability,p.status,p.slug].map(x=>'"'+String(x).replace(/"/g,'""')+'"').join(",")));}
+  const cell=x=>'"'+String(x==null?"":x).replace(/"/g,'""')+'"';
+  if(kind==="clientes"){head("id,nombre,apellido,email,telefono,origen,segmento,tags,pedidos,unidades,gasto_total,tematica_preferida,titulo_mas_comprado,ultima_compra,notas");
+    db.customers.forEach(c=>{const pr=prefsOf(c);rows.push([c.id,c.firstName||"",c.lastName||"",c.email||"",c.phone||"",c.source||"",seg(c),c.tags||"",pr.orders,pr.units,pr.spent,pr.fav?pr.fav.label+" ("+pr.fav.pct+"%)":"",pr.top[0]?pr.top[0].name:"",pr.last||"",c.note||""].map(cell).join(","))});}
+  if(kind==="pedidos"){head("numero,fecha,cliente,email,canal,estado,items,total");
+    db.orders.forEach(o=>{const c=custOf(o.customerId);rows.push([o.number,o.date,c?fullName(c):"",c?c.email||"":"",o.channel,o.status,o.items.map(i=>i.name+" x"+i.qty).join("; "),totalOf(o)].map(cell).join(","))});}
+  if(kind==="productos"){head("nombre,tematicas,precio_tienda,precio_crm,stock,disponibilidad,sin_stock,estado,slug");
+    db.products.forEach(p=>rows.push([p.name,themeLabels(p),p.price,p.crmPrice==null?"":p.crmPrice,p.stock,p.availability,isOut(p)?"Sin Stock":"",p.status,p.slug].map(cell).join(",")));}
   const b=new Blob(["\ufeff"+rows.join("\n")],{type:"text/csv;charset=utf-8"});
   const a=document.createElement("a");a.href=URL.createObjectURL(b);a.download="crm_"+kind+"_"+Date.now()+"_"+STORE.split(".")[0]+".csv";a.click();
   toast("CSV de "+kind+" exportado.","ok");
@@ -848,7 +1141,7 @@ function exportJSON(){
 function importJSON(ev){
   const f=ev.target.files[0];if(!f)return;
   const r=new FileReader();
-  r.onload=e=>{try{const o=JSON.parse(e.target.result);if(!o.products||!o.orders||!o.customers)throw new Error("formato no válido");db=o;save();render();toast("Backup importado correctamente.","ok")}catch(err){toast("Importación fallida: "+err.message,"err")}};
+  r.onload=e=>{try{const o=JSON.parse(e.target.result);if(!o.products||!o.orders||!o.customers)throw new Error("formato no válido");db=o;migrateDb(db);save();render();toast("Backup importado correctamente.","ok")}catch(err){toast("Importación fallida: "+err.message,"err")}};
   r.readAsText(f);
 }
 function clearDemo(){
@@ -863,7 +1156,7 @@ function resetAll(){
   location.reload();
 }
 
-function openModal(html){document.getElementById("modal").innerHTML=html;document.getElementById("modal-bg").classList.remove("hidden")}
+function openModal(html,wide){const m=document.getElementById("modal");m.classList.toggle("wide",!!wide);m.innerHTML=html;document.getElementById("modal-bg").classList.remove("hidden")}
 function closeModal(){document.getElementById("modal-bg").classList.add("hidden");document.getElementById("modal").innerHTML=""}
 
 document.getElementById("login-pass").addEventListener("keydown",e=>{if(e.key==="Enter")doLogin()});

@@ -1,0 +1,58 @@
+RÓTULO "SIN STOCK" DEBAJO DEL PRECIO — TIENDA ÁREA DE PICNIC
+==============================================================
+
+Alcance
+-------
+1) CRM (este repositorio): ya implementado en crm-area-de-picnic.html.
+   Cuando un producto tiene 0 unidades disponibles (o la tienda lo marca
+   OutOfStock) se muestra "Sin Stock" debajo del precio en la tabla de
+   Productos, en la ficha del producto y en las sugerencias de la ficha de
+   cliente. Estilo: color #e13030 · tipografía Instrument Sans (Google
+   Fonts) · tamaño 11 px.
+
+2) Tienda pública (tiendadeareadepicnic.mitiendanube.com): es un SaaS de
+   Tienda Nube (tema "Morelia"); su código no vive en este repositorio, así
+   que el cambio se aplica desde el panel de la tienda pegando el CSS de
+   abajo. Requiere acceso de administrador a la tienda.
+
+Dónde pegarlo
+-------------
+Panel de la tienda → Diseño → Personalizar el diseño actual → Código
+personalizado / "CSS personalizado" (según el plan figura como "Editar CSS
+avanzado") → pegar → Guardar y publicar.
+
+Cómo funciona
+-------------
+El tema ya incluye en cada producto un rótulo oculto
+  <div class="js-stock-label" data-label="Sin stock" style="display:none;">
+que su JavaScript muestra (.show()) cuando el producto no tiene stock, y en
+la ficha del producto el botón de compra recibe la clase "nostock". El CSS
+detecta esos estados con :has() y agrega "Sin Stock" debajo del contenedor
+del precio (.item-price-container en las grillas y .js-price-container en
+la ficha). No modifica el HTML del tema.
+
+CSS (copiar completo)
+---------------------
+@import url('https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;600&display=swap');
+
+/* Grillas de productos: catálogo, home, relacionados */
+.js-item-product:has(.js-stock-label:not([style*="display:none"]):not([style*="display: none"])) .item-price-container::after,
+/* Ficha de producto: sin unidades disponibles */
+.js-product-detail:has(.js-addtocart.nostock) .js-price-container::after{
+  content:"Sin Stock";
+  display:block;
+  margin-top:2px;
+  font-family:'Instrument Sans',sans-serif;
+  font-size:11px;
+  line-height:1.3;
+  font-weight:600;
+  color:#e13030;
+}
+
+Verificación
+------------
+1. Poné en 0 el stock de un producto de prueba (Productos → editar → Stock).
+2. Abrí el catálogo público: debajo del precio debe aparecer "Sin Stock" en
+   rojo (#e13030), Instrument Sans 11 px. En la ficha del producto, debajo
+   del precio también.
+3. :has() está soportado por Chrome/Edge 105+, Safari 15.4+ y Firefox 121+.
