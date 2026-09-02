@@ -1,0 +1,39 @@
+INTEGRACIÓN DE LA CRM CON LA TIENDA "ÁREA DE PICNIC"
+=====================================================
+
+La tienda pública (tiendadeareadepicnic.mitiendanube.com) es un SaaS de Tienda
+Nube: no se puede editar su código fuente directamente, pero SÍ se publica un
+enlace en su menú para que el equipo acceda a la CRM.
+
+PASO 1 - PUBLICAR LA CRM
+------------------------
+Subí crm-area-de-picnic.html a GitHub Pages / Netlify / Vercel y anotá la URL:
+   ej. https://TU-USUARIO.github.io/area-de-picnic-crm/crm-area-de-picnic.html
+
+PASO 2 - AÑADIR EL ENLACE EN LA TIENDA (admin de Tienda Nube)
+-------------------------------------------------------------
+1. Ingresá al panel: tiendadeareadepicnic.mitiendanube.com/admin
+2. Diseño → Menú de navegación → Agregar ítem "Enlace personalizado".
+3. Texto: CRM  ·  URL: <URL de la CRM desde Paso 1>
+4. Guardar y publicar.
+
+El enlace aparecerá en la barra de la tienda y llevará al login de la CRM
+(admin / admin123).
+
+PASO 3 - DATOS PRIVADOS EN VIVO (opcional, recomendado)
+-------------------------------------------------------
+1. En developers.tiendanube.com creá una "App privada" con scopes:
+   products_read, orders_read, customers_read.
+2. Copiá el access_token.
+3. En la CRM: Configuración → API privada Tienda Nube → pegá el token →
+   "Probar / importar pedidos".
+
+Así la CRM queda conectada en tiempo real tanto al catálogo público
+(precios/stock disponibles sin autenticación) como a la base privada
+(pedidos y clientes con token).
+
+ALTERNATIVA SIN PUBLICAR (local)
+--------------------------------
+Si solo buscás probar: abrí crm-area-de-picnic.html en tu navegador.
+Funciona completa, guarda todo en el navegador y se conecta igual al
+catálogo público real.

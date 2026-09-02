@@ -1,0 +1,123 @@
+﻿[
+    {
+        "slug":  "el-pais-en-tero-aventura-en-jujuy",
+        "name":  "El País en Tero – Aventura en Jujuy",
+        "price":  "30000",
+        "currency":  "ARS",
+        "stock":  "272",
+        "availability":  "https://schema.org/InStock",
+        "image":  "https://acdn-us.mitiendanube.com/stores/007/631/689/products/whatsapp-image-2026-08-02-at-16-53-03-d4d0f2ee13202dda6e17857011151719-480-0.webp",
+        "description":  "Comprá online El País en Tero – Aventura en Jujuy por $30.000,00. Hacé tu pedido y pagalo online.",
+        "weight":  "0.35"
+    },
+    {
+        "slug":  "el-pais-en-tero-aventura-en-el-litoral-2da-edicion",
+        "name":  "El país en Tero - Aventura en el Litoral (2da edición)",
+        "price":  "30000",
+        "currency":  "ARS",
+        "stock":  "199",
+        "availability":  "https://schema.org/InStock",
+        "image":  "https://acdn-us.mitiendanube.com/stores/007/631/689/products/img_8841-1-3834b51e7932c19fd117774701368005-480-0.webp",
+        "description":  "Comprá online El país en Tero - Aventura en el Litoral (2da edición) por $30.000,00. Hacé tu pedido y pagalo online.",
+        "weight":  "0.3"
+    },
+    {
+        "slug":  "el-pais-en-tero-aventura-en-puerto-madryn",
+        "name":  "El país en Tero - Aventura en Puerto Madryn",
+        "price":  "30000",
+        "currency":  "ARS",
+        "stock":  "99",
+        "availability":  "https://schema.org/InStock",
+        "image":  "https://acdn-us.mitiendanube.com/stores/007/631/689/products/img_2689-82cd64b37d70e0045017774663536542-480-0.webp",
+        "description":  "Comprá online El país en Tero - Aventura en Puerto Madryn por $30.000,00. Hacé tu pedido y pagalo online.",
+        "weight":  "0.3"
+    },
+    {
+        "slug":  "atrapaviajes",
+        "name":  "Atrapaviajes",
+        "price":  "28000",
+        "currency":  "ARS",
+        "stock":  "299",
+        "availability":  "https://schema.org/InStock",
+        "image":  "https://acdn-us.mitiendanube.com/stores/007/631/689/products/img_8661-1-1ae1f90e2d0ec7135317781860824281-480-0.webp",
+        "description":  "Un libro interactivo para chicos y familias viajeras. Atrapaviajes combina juegos, actividades, recuerdos y creatividad para transformar cada viaje en una experiencia inolvidable.",
+        "weight":  "0.5"
+    },
+    {
+        "slug":  "el-barrio-en-tero",
+        "name":  "El barrio en Tero",
+        "price":  "14000",
+        "currency":  "ARS",
+        "stock":  "599",
+        "availability":  "https://schema.org/InStock",
+        "image":  "https://acdn-us.mitiendanube.com/stores/007/631/689/products/img_8827-2-46c13fbfcf27d21e4b17774834181399-480-0.webp",
+        "description":  "Comprá online El barrio en Tero por $14.000,00. Hacé tu pedido y pagalo online.",
+        "weight":  "0.1"
+    },
+    {
+        "slug":  "huevo-tito-en-el-bodegon-hyd7i",
+        "name":  "Huevo Tito en el bodegón",
+        "price":  "20000",
+        "currency":  "ARS",
+        "stock":  "1500",
+        "availability":  "https://schema.org/InStock",
+        "image":  "https://acdn-us.mitiendanube.com/stores/007/631/689/products/huevo-tito-frente-3fb1fbbed131cadfcf17816511169295-480-0.webp",
+        "description":  "Comprá online Huevo Tito en el bodegón por $20.000,00. Hacé tu pedido y pagalo online.",
+        "weight":  "0.18"
+    },
+    {
+        "slug":  "no-te-olvides-antonia",
+        "name":  "¡No te olvides Antonia!",
+        "price":  "27000",
+        "currency":  "ARS",
+        "stock":  "200",
+        "availability":  "https://schema.org/InStock",
+        "image":  "https://acdn-us.mitiendanube.com/stores/007/631/689/products/no-te-olvides-1-46544d60c6b7bfbd1917781720555559-480-0.webp",
+        "description":  "Un cuento ilustrado para acompañar emociones, memoria y vínculos familiares. Ideal para niños de 3 a 7 años.",
+        "weight":  "0.3"
+    },
+    {
+        "slug":  "antonia-y-el-luno",
+        "name":  "Antonia y el Luno",
+        "price":  "27000",
+        "currency":  "ARS",
+        "stock":  "400",
+        "availability":  "https://schema.org/InStock",
+        "image":  "https://acdn-us.mitiendanube.com/stores/007/631/689/products/img_4504tn-jpg-189456870da9ce2d5417779062069321-480-0.webp",
+        "description":  "Comprá online Antonia y el Luno por $27.000,00. Hacé tu pedido y pagalo online.",
+        "weight":  "0.3"
+    },
+    {
+        "slug":  "la-biblia-y-el-bodegon-1k058",
+        "name":  "La biblia y el Bodegón",
+        "price":  "43000",
+        "currency":  "ARS",
+        "stock":  "1500",
+        "availability":  "https://schema.org/InStock",
+        "image":  "https://acdn-us.mitiendanube.com/stores/007/631/689/products/img_88801-07b69fcd961128dcf817816497184586-480-0.webp",
+        "description":  "Comprá online La biblia y el Bodegón por $43.000,00. Hacé tu pedido y pagalo online.",
+        "weight":  "0.5"
+    },
+    {
+        "slug":  "hay-equipo-a-cocinar",
+        "name":  "Hay equipo ¡a cocinar!",
+        "price":  "52000",
+        "currency":  "ARS",
+        "stock":  "300",
+        "availability":  "https://schema.org/InStock",
+        "image":  "https://acdn-us.mitiendanube.com/stores/007/631/689/products/img_8700-1-e6321d9f85dd2719f017781850617721-480-0.webp",
+        "description":  "Un libro de cocina ilustrado para compartir en familia. Incluye 46 recetas inspiradas en ingredientes típicos de las provincias argentinas, juegos, actividades y propuestas para aprender cocinando juntos.",
+        "weight":  "0.6"
+    },
+    {
+        "slug":  "la-semana-de-antonia",
+        "name":  "La semana de Antonia",
+        "price":  "27000",
+        "currency":  "ARS",
+        "stock":  "30",
+        "availability":  "https://schema.org/InStock",
+        "image":  "https://acdn-us.mitiendanube.com/stores/007/631/689/products/semana-1-1487c1bd84eb1fb4af17781842381033-480-0.webp",
+        "description":  "Comprá online La semana de Antonia por $27.000,00. Hacé tu pedido y pagalo online.",
+        "weight":  "0.3"
+    }
+]
