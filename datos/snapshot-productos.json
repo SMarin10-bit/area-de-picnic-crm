@@ -1,5 +1,5 @@
 {
-  "updatedAt": "2026-09-27T04:31:01Z",
+  "updatedAt": "2026-10-07T14:40:16Z",
   "source": "https://tiendadeareadepicnic.mitiendanube.com/productos",
   "store": "tiendadeareadepicnic.mitiendanube.com",
   "count": 11,
@@ -55,7 +55,7 @@
     {
       "slug": "el-barrio-en-tero",
       "name": "El barrio en Tero",
-      "price": 14000,
+      "price": 14500,
       "currency": "ARS",
       "stock": 599,
       "availability": "InStock",
@@ -91,7 +91,7 @@
     {
       "slug": "no-te-olvides-antonia",
       "name": "¡No te olvides Antonia!",
-      "price": 27000,
+      "price": 28000,
       "currency": "ARS",
       "stock": 199,
       "availability": "InStock",
@@ -103,7 +103,7 @@
     {
       "slug": "antonia-y-el-luno",
       "name": "Antonia y el Luno",
-      "price": 27000,
+      "price": 28000,
       "currency": "ARS",
       "stock": 399,
       "availability": "InStock",
@@ -127,7 +127,7 @@
     {
       "slug": "la-semana-de-antonia",
       "name": "La semana de Antonia",
-      "price": 27000,
+      "price": 28000,
       "currency": "ARS",
       "stock": 30,
       "availability": "InStock",
